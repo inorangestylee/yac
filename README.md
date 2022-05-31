@@ -67,11 +67,11 @@ modular division: `%`
 | `abs(x)` | absolute value of x |
 | `exp(x)` | exponent of x |
 
-## Notes
+## notes
 
 This is "just for fun" project to understand how SYA and RPN works.
 A lot of dirty code and unhandled exceptions here.
 
-## Author
+## author
 
 Oleg Galushko
