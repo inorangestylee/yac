@@ -3,27 +3,27 @@
 #include <iostream>
 #include <vector>
 
+
 namespace calculator {
-	using namespace std;
 
 	class Variable
 	{
 	public:
-		string name;
+		std::string name;
 		double value;
 
-		Variable(string n, double v) : name(n), value(v) {};
+		Variable(std::string n, double v) : name(n), value(v) {};
 	};
 
 	class VariableTable
 	{
 	public:
-		double get(string n);
-		void set(string n, double v);
-		bool is_present(string n);
+		double get(std::string n);
+		void set(std::string n, double v);
+		bool is_present(std::string n);
 
 		VariableTable();
 	private:
-		vector<Variable> data;
+		std::vector<Variable> data;
 	};
 }

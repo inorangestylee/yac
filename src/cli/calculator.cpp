@@ -1,7 +1,13 @@
-﻿#include <iostream>
-#include <vector>
+﻿#include "calculator.h"
+
+#include <cmath>
 #include <deque>
+#include <iostream>
+#include <vector>
+
 #include "error.h"
+#include "math_ex.h"
+#include "variables.h"
 
 namespace calculator {
 
@@ -38,69 +44,79 @@ namespace calculator {
 		while (cin >> ch) {
 			if (isdigit(ch)) {
 				cin.putback(ch);
-				double _v;
-				cin >> _v;
-				auto _token = Token(TokenType::NUM, _v);
-				tokens.push_back(_token);
+				double v;
+				cin >> v;
+				auto token = Token(TokenType::NUM, v);
+				tokens.push_back(token);
 			} 
 			else if (isalpha(ch)) {
 				cin.putback(ch);
-				char _ch;
-				string _name = "";
-				while (cin >> _ch && isalpha(_ch)) {
-					_name += _ch;
+				char temp_ch;
+				string name = "";
+				while (cin >> temp_ch && isalpha(temp_ch)) {
+					name += temp_ch;
 				}
 				// предполагается что переменные будут в UPPERCASE (A, B, C, PI)
-				// функции в lowercase (log, exp, ln, mod)
-				auto _token = (isupper(ch))
-					? Token(TokenType::VAR, 0, '0', -1, false, _name)
-					: Token(TokenType::FUNC, 0, '0', -1, false, _name);
-				tokens.push_back(_token);
-				cin.putback(_ch);
+				// функции в lowercase (log, exp, ln, mod)			
+				auto token = (isupper(ch))
+					? Token(TokenType::VAR, 0, '0', -1, false, name)
+					: Token(TokenType::FUNC, 0, '0', -1, false, name);
+				
+				double args_count = 1;
+
+				if (token.type == TokenType::FUNC && token.name == "logn")
+				{
+					args_count = 2;
+				}
+				
+				token.value = args_count;
+
+				tokens.push_back(token);
+				cin.putback(temp_ch);
 			}
 			else {
-				TokenType _type = TokenType::EMPTY;
-				int _priority = -1;
-				bool _right_assoc = false;
+				TokenType type = TokenType::EMPTY;
+				int priority = -1;
+				bool right_assoc = false;
 
 				switch (ch) {
 				case ',':
-					_type = TokenType::SEP;
+					type = TokenType::SEP;
 					break;
 				case '(':
 				{
-					_type = TokenType::L_BR;
+					type = TokenType::L_BR;
 					break;
 				}
 				case ')':
 				{
-					_type = TokenType::R_BR;
+					type = TokenType::R_BR;
 					break;
 				}
 				case '^':
 				{
-					_type = TokenType::OP;
-					_priority = 4;
-					_right_assoc = true;
+					type = TokenType::OP;
+					priority = 4;
+					right_assoc = true;
 					break;
 				}
 				case '*': case '/': case '%':
 				{
-					_type = TokenType::OP;
-					_priority = 3;
+					type = TokenType::OP;
+					priority = 3;
 					break;
 				}
 				case '+': case '-':
 				{
-					_type = TokenType::OP;
-					_priority = 2;
+					type = TokenType::OP;
+					priority = 2;
 					break;
 				}
 				case ';':
 					return tokens;
 				}
-				auto _token = Token(_type, 0, ch, _priority, _right_assoc);
-				tokens.push_back(_token);
+				auto token = Token(type, 0, ch, priority, right_assoc);
+				tokens.push_back(token);
 			}
 		}
 	};
@@ -171,7 +187,7 @@ namespace calculator {
 
 			case TokenType::R_BR:
 			{
-				bool _ok = false;
+				bool is_ok = false;
 				// WHILE оператор на верщине стэка не открывающая скобка {
 				//   ПРОВЕРЯЕМ что стэк не пустой {
 				//     ЕСЛИ стэк пустой -> швыряем фаталку (скобка не найдена)
@@ -185,11 +201,11 @@ namespace calculator {
 				while (!stack.empty() && stack.back().type != TokenType::L_BR) {
 					output.push_back(stack.back());
 					stack.pop_back();
-					_ok = true;
+					is_ok = true;
 				}
 				stack.pop_back();
 				
-				if (!_ok && stack.empty()) {
+				if (!is_ok && stack.empty()) {
 					Fatal("parenthesis mismatch");
 				}
 
@@ -216,32 +232,77 @@ namespace calculator {
 		return output;
 	}
 
-	deque<Token> evalRPN(deque<Token> tokens) 
+	deque<Token> evalRPN(deque<Token> tokens)
 	{
-		vector<string> trace;
-		int step = 0;
+		auto vt = VariableTable::VariableTable();
+		
 		while (tokens.size() > 1) {
-			++step;
-			for (int i = 0; i < tokens.size(); ++i)
+			auto t = tokens.front();
+
+			switch (t.type) {
+			case TokenType::NUM: {
+				tokens.push_back(t);
+				tokens.pop_front();
+				break;
+			}
+			case TokenType::VAR:
 			{
-				if (tokens[i].type == TokenType::OP) {
-					double _r;
-					switch (tokens[i].ch)
-					{
-					case '*':
-						//_r = tokens[i - 2].value * tokens[i - 1].value;
-						//for (deque<Token>::iterator it = tokens.at(i-2); it != tokens(i); )
-						//{
-						//	tokens.
-						//	tokens.erase(it);
-						//	++it;
-						//}
-						//	tokens.pop_back(i - 2);
-						//break;
-					}
+				double v = vt.get(t.name);
+				auto num_token = Token(TokenType::NUM, v);
+				tokens.push_back(num_token);
+				tokens.pop_front();
+				break;
+			}
+			case TokenType::OP:
+			{
+				double b = tokens.back().value;
+				tokens.pop_back();
+
+				double a = tokens.back().value;
+				tokens.pop_back();
+
+				double r;
+				if		(t.ch == '+') { r = a + b; }
+				else if (t.ch == '-') { r = a - b; }
+				else if (t.ch == '*') { r = a * b; }
+				else if (t.ch == '/') { r = division(a, b); }
+				else if (t.ch == '%') { r = division(a, b, true); }
+				else if (t.ch == '^') { r = pow(a, b); }
+				else {
+					Fatal("unknown operation");
 				}
+				tokens.pop_front();
+				tokens.push_back(Token(TokenType::NUM, r));
+				break;
+			}
+			case TokenType::FUNC:
+			{
+				vector<double> args;
+				for (int i = 0; i < (int)t.value; ++i)
+				{
+					args.push_back(tokens.back().value);
+					tokens.pop_back();
+				}
+
+				double r;
+				if (t.name == "lg")			{ r = log10(args[0]); }
+				if (t.name == "log")		{ r = log2(args[0]); }
+				else if (t.name == "ln")	{ r = log(args[0]); }
+				else if (t.name == "sqrt")	{ r = sqrt(args[0]); }
+				else if (t.name == "fact")	{ r = factorial((unsigned int)args[0]); } //?
+				else if (t.name == "abs")	{ r = abs(args[0]); }
+				else if (t.name == "exp")	{ r = exp(args[0]); }
+				else {
+					string err_msg = "unknown function '" + t.name + "'";
+					Fatal(err_msg);
+				}
+				break;
+			}
+			default:
+				Fatal("unknown token type");
 			}
 		}
+		return tokens;
 	}
 
 
@@ -250,7 +311,8 @@ namespace calculator {
 	{
 		auto tokens = getTokens();
 		auto queue = getRPN(tokens);
-		
+		auto resultq = evalRPN(queue);
+
 		cout << "reverse polish notation:";
 		for (auto t : queue) {
 			cout << ' ';
@@ -267,5 +329,6 @@ namespace calculator {
 			}
 		}
 		cout << endl;
+		cout << "result: " << resultq[0].value << endl;
 	}
 }

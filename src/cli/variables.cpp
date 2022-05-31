@@ -1,31 +1,14 @@
+#include "variables.h"
+
 #include <iostream>
 #include <vector>
+
 #include "error.h"
+
 
 namespace calculator
 {
 	using namespace std;
-
-	class Variable
-	{
-	public:
-		string name;
-		double value;
-
-		Variable(string n, double v) : name(n), value(v) {};
-	};
-
-	class VariableTable
-	{
-	public:
-		double get(string n);
-		void set(string n, double v);
-		bool is_present(string n);
-
-		VariableTable();
-	private:
-		vector<Variable> data;
-	};
 
 	VariableTable::VariableTable() {
 		data = {
@@ -33,6 +16,17 @@ namespace calculator
 			Variable("E", 2.718281)
 		};
 	}
+
+
+	bool VariableTable::is_present(string n)
+	{
+		for (const Variable& v : data)
+		{
+			if (v.name == n) { return true; }
+		}
+		return false;
+	}
+
 
 	double VariableTable::get(string n)
 	{
@@ -45,14 +39,5 @@ namespace calculator
 		}
 		string err_msg = "variable '" + n + "' is not defined";
 		Fatal(err_msg);
-	}
-
-	bool VariableTable::is_present(string n)
-	{
-		for (const Variable& v : data)
-		{
-			if (v.name == n) { return true; }
-		}
-		return false;
 	}
 }
