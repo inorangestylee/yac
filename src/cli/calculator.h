@@ -10,5 +10,5 @@
 #include "variables.h"
 
 namespace calculator {
-	void calculate();
+    void calculate();
 }
